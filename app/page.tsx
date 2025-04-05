@@ -21,11 +21,11 @@ import {
   Clock,
   Sparkles,
 } from "lucide-react";
-import { GameCard } from "@/app/components/game-card";
-import { TournamentCard } from "@/app/components/tournament-card";
-import { useMobile } from "@/app/hooks/use-mobile";
-import { AnimatedButton } from "@/app/components/animated-button";
-import { ParticleButton } from "@/app/components/particle-button";
+import { GameCard } from "@/components/game-card";
+import { TournamentCard } from "@/components/tournament-card";
+import { useMobile } from "@/hooks/use-mobile";
+import { AnimatedButton } from "@/components/animated-button";
+import { ParticleButton } from "@/components/particle-button";
 
 export default function Home() {
   const [isHovering, setIsHovering] = useState("");

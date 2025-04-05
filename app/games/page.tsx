@@ -15,9 +15,9 @@ import {
   Trophy,
   Clock,
 } from "lucide-react";
-import { useMobile } from "@/app/hooks/use-mobile";
-import { AnimatedButton } from "@/app/components/animated-button";
-import { ParticleButton } from "@/app/components/particle-button";
+import { useMobile } from "@/hooks/use-mobile";
+import { AnimatedButton } from "@/components/animated-button";
+import { ParticleButton } from "@/components/particle-button";
 
 export default function GamesPage() {
   const [selectedCategory, setSelectedCategory] = useState("All");
