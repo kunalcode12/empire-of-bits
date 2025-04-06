@@ -2,7 +2,7 @@ import type React from "react";
 import "./globals.css";
 import type { Metadata } from "next";
 import { ThemeProvider } from "@/components/theme-provider";
-// import { Toaster } from "@/components/ui/toaster";
+import { Toaster } from "@/components/ui/toaster";
 
 export const metadata: Metadata = {
   title: "Empire of Bits - Premium Web3 Arcade Gaming Platform",
@@ -33,11 +33,11 @@ export default function RootLayout({
         <ThemeProvider
           attribute="class"
           defaultTheme="light"
-          enableSystem={false}
-          disableTransitionOnChange
+          enableSystem={true}
+          disableTransitionOnChange={false}
         >
           {children}
-          {/* <Toaster /> */}
+          <Toaster />
         </ThemeProvider>
       </body>
     </html>

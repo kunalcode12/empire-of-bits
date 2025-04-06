@@ -5,6 +5,7 @@ import { Users, Coins, Zap } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { AnimatedButton } from "./animated-button";
+import { useTheme } from "./theme-provider";
 
 interface GameCardProps {
   game: {
@@ -22,18 +23,21 @@ interface GameCardProps {
 }
 
 export function GameCard({ game, onHover, onClick }: GameCardProps) {
+  const { theme } = useTheme();
+  const isDark = theme === "dark";
+
   const getGameImage = (id: number) => {
     return `/game${id}.png`;
   };
 
   return (
     <motion.div
-      className="bg-black border-3 border-white hover:border-yellow-400 transition-colors arcade-card"
+      className="bg-background border-3 border-foreground hover:border-[hsl(var(--accent-yellow))] transition-colors arcade-card"
       whileHover={{ y: -8 }}
       onMouseEnter={onHover}
       onClick={onClick}
     >
-      <div className="bg-gray-900 h-56 relative overflow-hidden">
+      <div className="bg-secondary h-56 relative overflow-hidden">
         <Image
           src={getGameImage(game.id) || "/placeholder.svg"}
           alt={game.title}
@@ -43,13 +47,15 @@ export function GameCard({ game, onHover, onClick }: GameCardProps) {
         />
 
         <div className="absolute top-0 left-0 w-full p-3 flex justify-between">
-          <span className="px-3 py-1.5 bg-black/80 text-base font-bold">
+          <span className="px-3 py-1.5 bg-background/80 text-base font-bold">
             {game.category}
           </span>
 
           <span
             className={`px-3 py-1.5 text-base font-bold ${
-              game.status === "live" ? "bg-red-600" : "bg-yellow-600"
+              game.status === "live"
+                ? "bg-red-600 text-white"
+                : "bg-yellow-600 text-white"
             }`}
           >
             {game.status === "live" ? "LIVE" : "WAITING"}
@@ -57,12 +63,12 @@ export function GameCard({ game, onHover, onClick }: GameCardProps) {
         </div>
 
         <div className="absolute bottom-0 left-0 w-full p-3 flex justify-between text-sm">
-          <span className="px-3 py-1.5 bg-black/80 font-bold flex items-center">
-            <Coins className="h-4 w-4 mr-2 text-yellow-400" />
+          <span className="px-3 py-1.5 bg-background/80 font-bold flex items-center">
+            <Coins className="h-4 w-4 mr-2 text-[hsl(var(--accent-yellow))]" />
             MIN BET: {game.minBet} ETH
           </span>
 
-          <span className="px-3 py-1.5 bg-black/80 font-bold flex items-center">
+          <span className="px-3 py-1.5 bg-background/80 font-bold flex items-center">
             <Users className="h-4 w-4 mr-2" />
             {game.players}/{game.maxPlayers}
           </span>
@@ -80,15 +86,17 @@ export function GameCard({ game, onHover, onClick }: GameCardProps) {
           )}
         </h3>
 
-        <div className="flex justify-between items-center text-base text-gray-400 mb-5">
+        <div className="flex justify-between items-center text-base text-foreground/70 mb-5">
           <div className="flex items-center">
-            <Zap className="h-5 w-5 mr-2 text-yellow-400" />
+            <Zap className="h-5 w-5 mr-2 text-[hsl(var(--accent-yellow))]" />
             Prize Pool: {game.prize} ETH
           </div>
         </div>
 
         <Link href={`/games/${game.id}`}>
-          <AnimatedButton className="arcade-btn bg-purple-700 text-white px-5 py-3 w-full border-3 border-purple-600 hover:bg-purple-600 transition-colors text-lg">
+          <AnimatedButton
+            className={`arcade-btn bg-[hsl(var(--accent-purple))] text-white px-5 py-3 w-full border-3 border-[hsl(var(--accent-purple)/0.7)] hover:bg-[hsl(var(--accent-purple)/0.9)] transition-colors text-lg`}
+          >
             {game.status === "live" ? "JOIN GAME" : "PLAY NOW"}
           </AnimatedButton>
         </Link>

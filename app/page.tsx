@@ -26,6 +26,9 @@ import { TournamentCard } from "@/components/tournament-card";
 import { useMobile } from "@/hooks/use-mobile";
 import { AnimatedButton } from "@/components/animated-button";
 import { ParticleButton } from "@/components/particle-button";
+import { ThemeToggle } from "@/components/theme-toggle";
+import { useTheme } from "@/components/theme-provider";
+import { useToast } from "@/components/ui/use-toast";
 
 export default function Home() {
   const [isHovering, setIsHovering] = useState("");
@@ -37,8 +40,29 @@ export default function Home() {
   const [cryptoBalance, setCryptoBalance] = useState("0.00");
   const [tokenBalance, setTokenBalance] = useState("0");
   const [scrolled, setScrolled] = useState(false);
+  const [showNotification, setShowNotification] = useState(false);
+  const [notifications, setNotifications] = useState([
+    {
+      id: 1,
+      title: "Tournament Starting",
+      message: "WEEKEND WARRIOR tournament starts in 30 minutes!",
+    },
+    {
+      id: 2,
+      title: "New Game Added",
+      message: "CRYPTO PUZZLER is now available to play!",
+    },
+    {
+      id: 3,
+      title: "Bonus Tokens",
+      message: "You received 50 bonus tokens for daily login!",
+    },
+  ]);
+
   const audioRef = useRef<HTMLAudioElement>(null);
   const isMobile = useMobile();
+  const { theme } = useTheme();
+  const { toast } = useToast();
 
   // Simulated data
   const featuredGames = [
@@ -153,6 +177,22 @@ export default function Home() {
     };
   }, []);
 
+  // Show welcome toast on first load
+  useEffect(() => {
+    const hasSeenWelcome = localStorage.getItem("hasSeenWelcome");
+    if (!hasSeenWelcome) {
+      setTimeout(() => {
+        toast({
+          title: "Welcome to Empire of Bits!",
+          description:
+            "The ultimate Web3 arcade gaming platform. Connect your wallet to start playing!",
+          duration: 5000,
+        });
+        localStorage.setItem("hasSeenWelcome", "true");
+      }, 1000);
+    }
+  }, [toast]);
+
   const playSound = (sound: string) => {
     if (audioRef.current) {
       audioRef.current.src = `/sounds/${sound}.mp3`;
@@ -169,22 +209,39 @@ export default function Home() {
     setCryptoBalance("1.45");
     setTokenBalance("500");
     playSound("success");
+
+    toast({
+      title: "Wallet Connected!",
+      description: "Your wallet has been successfully connected.",
+      duration: 3000,
+    });
   };
 
   return (
-    <div className="min-h-screen bg-black text-white font-mono overflow-hidden relative">
+    <div className="min-h-screen bg-background text-foreground font-mono overflow-hidden relative">
       {/* Audio element for sound effects */}
       <audio ref={audioRef} className="hidden" />
 
-      {/* CRT and scanline effects */}
+      {/* Theme-specific effects */}
       <div className="fixed inset-0 pointer-events-none z-10">
-        <div className="absolute inset-0 bg-[url('/scanlines.png')] opacity-10"></div>
-        <div className="absolute inset-0 bg-radial-gradient opacity-20"></div>
-        <div className="absolute inset-0 crt-effect"></div>
+        {theme === "dark" ? (
+          <>
+            {/* Dark theme effects */}
+            <div className="absolute inset-0 bg-[url('/scanlines.png')] opacity-10"></div>
+            <div className="absolute inset-0 bg-radial-gradient opacity-20"></div>
+            <div className="absolute inset-0 crt-effect"></div>
+          </>
+        ) : (
+          <>
+            {/* Light theme effects */}
+            <div className="absolute inset-0 dot-pattern"></div>
+            <div className="absolute inset-0 animated-gradient"></div>
+          </>
+        )}
       </div>
 
-      {/* Pixel grid overlay */}
-      <div className="absolute inset-0 bg-[url('/pixel-grid.png')] opacity-5 pointer-events-none z-0"></div>
+      {/* Noise overlay */}
+      <div className="noise"></div>
 
       {/* Custom cursor (desktop only) */}
       {!isMobile && (
@@ -193,7 +250,7 @@ export default function Home() {
           animate={{ x: cursorPosition.x - 24, y: cursorPosition.y - 24 }}
           transition={{ type: "tween", ease: "backOut", duration: 0.1 }}
         >
-          <div className="w-full h-full border-3 border-white rotate-45 animate-pulse"></div>
+          <div className="w-full h-full border-3 border-current rotate-45 animate-pulse"></div>
         </motion.div>
       )}
 
@@ -201,7 +258,7 @@ export default function Home() {
       <header
         className={`fixed top-0 left-0 right-0 z-40 transition-all duration-300 ${
           scrolled
-            ? "py-3 bg-black/90 backdrop-blur-md border-b-4 border-white"
+            ? "py-3 bg-background/90 backdrop-blur-md border-b-4 border-foreground"
             : "py-5 bg-transparent"
         }`}
       >
@@ -221,7 +278,7 @@ export default function Home() {
               }}
               className="mr-3"
             >
-              <Gamepad2 className="h-10 w-10 text-white" />
+              <Gamepad2 className="h-10 w-10 text-foreground" />
             </motion.div>
 
             <motion.h1
@@ -232,8 +289,13 @@ export default function Home() {
               transition={{ duration: 0.5 }}
             >
               <span className="inline-block">EMPIRE</span>
-              <span className="inline-block text-yellow-400"> OF </span>
-              <span className="inline-block text-purple-500">BITS</span>
+              <span className="inline-block text-[hsl(var(--accent-yellow))]">
+                {" "}
+                OF{" "}
+              </span>
+              <span className="inline-block text-[hsl(var(--accent-purple))]">
+                BITS
+              </span>
             </motion.h1>
           </div>
 
@@ -285,26 +347,82 @@ export default function Home() {
 
           {/* Wallet Section */}
           <div className="flex items-center gap-4">
-            <motion.button
-              className="relative p-3 arcade-btn-large"
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.95 }}
-              onMouseEnter={() => playSound("hover")}
-              onClick={() => playSound("notification")}
-            >
-              <Bell className="h-6 w-6" />
-              <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full"></span>
-            </motion.button>
+            {/* Theme Toggle */}
+            <ThemeToggle />
+
+            {/* Notifications */}
+            <div className="relative">
+              <motion.button
+                className="relative p-3 arcade-btn-large border-3 border-current"
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.95 }}
+                onMouseEnter={() => playSound("hover")}
+                onClick={() => {
+                  setShowNotification(!showNotification);
+                  playSound("notification");
+                }}
+              >
+                <Bell className="h-6 w-6" />
+                {notifications.length > 0 && (
+                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center text-xs text-white">
+                    {notifications.length}
+                  </span>
+                )}
+              </motion.button>
+
+              {/* Notifications dropdown */}
+              <AnimatePresence>
+                {showNotification && (
+                  <motion.div
+                    className="absolute right-0 mt-2 w-80 bg-background border-3 border-foreground shadow-lg z-50"
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                  >
+                    <div className="p-3 border-b-2 border-foreground/20 flex justify-between items-center">
+                      <h3 className="text-sm font-bold">NOTIFICATIONS</h3>
+                      <button
+                        className="text-xs text-foreground/70 hover:text-foreground"
+                        onClick={() => setNotifications([])}
+                      >
+                        CLEAR ALL
+                      </button>
+                    </div>
+                    <div className="max-h-80 overflow-y-auto">
+                      {notifications.length > 0 ? (
+                        notifications.map((notification) => (
+                          <div
+                            key={notification.id}
+                            className="p-4 border-b border-foreground/10 hover:bg-foreground/5 transition-colors"
+                          >
+                            <h4 className="text-sm font-bold mb-1">
+                              {notification.title}
+                            </h4>
+                            <p className="text-sm text-foreground/70">
+                              {notification.message}
+                            </p>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="p-4 text-center text-foreground/50">
+                          <p className="text-sm">No new notifications</p>
+                        </div>
+                      )}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
 
             {walletConnected ? (
               <motion.div
-                className="hidden md:flex items-center gap-3 bg-gray-900 p-3 border-3 border-white arcade-btn-large"
+                className="hidden md:flex items-center gap-3 bg-secondary p-3 border-3 border-foreground arcade-btn-large"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onMouseEnter={() => playSound("hover")}
                 onClick={() => setShowWalletModal(true)}
               >
-                <Wallet className="h-6 w-6 text-yellow-400" />
+                <Wallet className="h-6 w-6 text-[hsl(var(--accent-yellow))]" />
                 <span className="text-base font-bold">{cryptoBalance} ETH</span>
                 <div className="flex items-center ml-2">
                   <Image
@@ -324,7 +442,7 @@ export default function Home() {
                   playSound("click");
                 }}
                 onHover={() => playSound("hover")}
-                className="hidden md:flex items-center gap-3 bg-purple-700 p-3 border-3 border-purple-500 text-base font-bold"
+                className="hidden md:flex items-center gap-3 bg-[hsl(var(--accent-purple))] p-3 border-3 border-[hsl(var(--accent-purple)/0.7)] text-base font-bold text-white"
               >
                 <Wallet className="h-6 w-6" />
                 <span>CONNECT WALLET</span>
@@ -333,7 +451,7 @@ export default function Home() {
 
             {/* Mobile menu button */}
             <motion.button
-              className="md:hidden arcade-btn-large p-3"
+              className="md:hidden arcade-btn-large p-3 border-3 border-current"
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.95 }}
               onClick={() => {
@@ -355,7 +473,7 @@ export default function Home() {
       <AnimatePresence>
         {menuOpen && (
           <motion.div
-            className="fixed inset-0 bg-black z-40 md:hidden pt-20"
+            className="fixed inset-0 bg-background z-40 md:hidden pt-20"
             initial={{ opacity: 0, x: "100%" }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: "100%" }}
@@ -364,7 +482,7 @@ export default function Home() {
             <div className="flex flex-col h-full px-6 py-8">
               <Link
                 href="/"
-                className="py-5 border-b-2 border-gray-800 text-2xl font-bold"
+                className="py-5 border-b-2 border-foreground/20 text-2xl font-bold"
                 onClick={() => {
                   setMenuOpen(false);
                   playSound("click");
@@ -374,7 +492,7 @@ export default function Home() {
               </Link>
               <Link
                 href="/games"
-                className="py-5 border-b-2 border-gray-800 text-2xl font-bold"
+                className="py-5 border-b-2 border-foreground/20 text-2xl font-bold"
                 onClick={() => {
                   setMenuOpen(false);
                   playSound("click");
@@ -384,7 +502,7 @@ export default function Home() {
               </Link>
               <Link
                 href="/tournaments"
-                className="py-5 border-b-2 border-gray-800 text-2xl font-bold"
+                className="py-5 border-b-2 border-foreground/20 text-2xl font-bold"
                 onClick={() => {
                   setMenuOpen(false);
                   playSound("click");
@@ -394,7 +512,7 @@ export default function Home() {
               </Link>
               <Link
                 href="/marketplace"
-                className="py-5 border-b-2 border-gray-800 text-2xl font-bold"
+                className="py-5 border-b-2 border-foreground/20 text-2xl font-bold"
                 onClick={() => {
                   setMenuOpen(false);
                   playSound("click");
@@ -405,7 +523,7 @@ export default function Home() {
 
               {!walletConnected && (
                 <AnimatedButton
-                  className="mt-8 flex items-center justify-center gap-3 bg-purple-700 py-4 border-3 border-purple-500 text-xl font-bold"
+                  className="mt-8 flex items-center justify-center gap-3 bg-[hsl(var(--accent-purple))] py-4 border-3 border-[hsl(var(--accent-purple)/0.7)] text-xl font-bold text-white"
                   onClick={() => {
                     setShowWalletModal(true);
                     setMenuOpen(false);
@@ -418,9 +536,9 @@ export default function Home() {
               )}
 
               {walletConnected && (
-                <div className="mt-8 p-6 border-3 border-white bg-gray-900">
+                <div className="mt-8 p-6 border-3 border-foreground bg-secondary">
                   <div className="flex justify-between items-center mb-4">
-                    <span className="text-gray-400 text-lg">WALLET</span>
+                    <span className="text-foreground/70 text-lg">WALLET</span>
                     <span className="text-base">0x71...3F4d</span>
                   </div>
                   <div className="flex justify-between items-center mb-4">
@@ -451,6 +569,14 @@ export default function Home() {
                   </div>
                 </div>
               )}
+
+              {/* Theme toggle in mobile menu */}
+              <div className="mt-8 flex justify-center">
+                <div className="flex items-center gap-4">
+                  <span className="text-lg">THEME:</span>
+                  <ThemeToggle />
+                </div>
+              </div>
             </div>
           </motion.div>
         )}
@@ -460,19 +586,19 @@ export default function Home() {
       <AnimatePresence>
         {showWalletModal && (
           <motion.div
-            className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4"
+            className="fixed inset-0 bg-foreground/80 flex items-center justify-center z-50 p-4"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
           >
             <motion.div
-              className="bg-gray-900 border-4 border-white p-8 max-w-md w-full relative"
+              className="bg-background border-4 border-foreground p-8 max-w-md w-full relative pixel-corners"
               initial={{ scale: 0.9, y: 20 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.9, y: 20 }}
             >
               <button
-                className="absolute top-4 right-4 text-gray-400 hover:text-white"
+                className="absolute top-4 right-4 text-foreground/70 hover:text-foreground"
                 onClick={() => {
                   setShowWalletModal(false);
                   playSound("click");
@@ -490,7 +616,7 @@ export default function Home() {
 
               <div className="grid gap-5">
                 <AnimatedButton
-                  className="flex items-center justify-between p-5 border-3 border-white hover:border-yellow-400 hover:bg-gray-800 transition-colors"
+                  className="flex items-center justify-between p-5 border-3 border-foreground hover:border-[hsl(var(--accent-yellow))] hover:bg-foreground/5 transition-colors"
                   onClick={handleConnectWallet}
                 >
                   <div className="flex items-center">
@@ -507,7 +633,7 @@ export default function Home() {
                 </AnimatedButton>
 
                 <AnimatedButton
-                  className="flex items-center justify-between p-5 border-3 border-white hover:border-yellow-400 hover:bg-gray-800 transition-colors"
+                  className="flex items-center justify-between p-5 border-3 border-foreground hover:border-[hsl(var(--accent-yellow))] hover:bg-foreground/5 transition-colors"
                   onClick={handleConnectWallet}
                 >
                   <div className="flex items-center">
@@ -524,7 +650,7 @@ export default function Home() {
                 </AnimatedButton>
 
                 <AnimatedButton
-                  className="flex items-center justify-between p-5 border-3 border-white hover:border-yellow-400 hover:bg-gray-800 transition-colors"
+                  className="flex items-center justify-between p-5 border-3 border-foreground hover:border-[hsl(var(--accent-yellow))] hover:bg-foreground/5 transition-colors"
                   onClick={handleConnectWallet}
                 >
                   <div className="flex items-center">
@@ -541,7 +667,7 @@ export default function Home() {
                 </AnimatedButton>
               </div>
 
-              <p className="text-sm text-gray-400 mt-8 text-center">
+              <p className="text-sm text-foreground/70 mt-8 text-center">
                 By connecting your wallet, you agree to our Terms of Service and
                 Privacy Policy
               </p>
@@ -555,9 +681,9 @@ export default function Home() {
         <section className="py-16 md:py-24 px-4 text-center relative overflow-hidden">
           {/* Animated background elements */}
           <div className="absolute inset-0 overflow-hidden pointer-events-none">
-            <div className="absolute top-1/4 left-1/4 w-8 h-8 bg-purple-500 rotate-45 animate-float"></div>
-            <div className="absolute top-1/3 right-1/4 w-6 h-6 bg-yellow-400 rotate-45 animate-float-delay"></div>
-            <div className="absolute bottom-1/4 left-1/3 w-7 h-7 bg-green-500 rotate-45 animate-float-slow"></div>
+            <div className="absolute top-1/4 left-1/4 w-8 h-8 bg-[hsl(var(--accent-purple))] rotate-45 animate-float"></div>
+            <div className="absolute top-1/3 right-1/4 w-6 h-6 bg-[hsl(var(--accent-yellow))] rotate-45 animate-float-delay"></div>
+            <div className="absolute bottom-1/4 left-1/3 w-7 h-7 bg-[hsl(var(--accent-green))] rotate-45 animate-float-slow"></div>
             <div className="absolute bottom-1/3 right-1/3 w-5 h-5 bg-red-500 rotate-45 animate-float-slower"></div>
           </div>
 
@@ -568,13 +694,13 @@ export default function Home() {
               transition={{ duration: 0.5 }}
               className="mb-4"
             >
-              <span className="inline-block px-4 py-2 bg-purple-700 text-base font-bold border-3 border-purple-500 mb-3">
+              <span className="inline-block px-4 py-2 bg-[hsl(var(--accent-purple))] text-base font-bold border-3 border-[hsl(var(--accent-purple)/0.7)] mb-3 text-white">
                 WEB3 ARCADE GAMING
               </span>
             </motion.div>
 
             <motion.h2
-              className="text-5xl md:text-7xl font-bold mb-8 text-white glitch-text-lg"
+              className="text-5xl md:text-7xl font-bold mb-8 glitch-text-lg"
               data-text="PLAY. BET. WIN."
               initial={{ y: -50, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
@@ -584,7 +710,7 @@ export default function Home() {
             </motion.h2>
 
             <motion.p
-              className="text-xl md:text-2xl mb-12 text-gray-300 max-w-3xl mx-auto"
+              className="text-xl md:text-2xl mb-12 text-foreground/80 max-w-3xl mx-auto"
               initial={{ y: 50, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ duration: 0.5, delay: 0.2 }}
@@ -608,7 +734,7 @@ export default function Home() {
               >
                 <Link href="/games">
                   <ParticleButton
-                    className="bg-purple-700 text-white px-12 py-5 text-2xl font-bold border-4 border-purple-500 relative overflow-hidden group"
+                    className="bg-[hsl(var(--accent-purple))] text-white px-12 py-5 text-2xl font-bold border-4 border-[hsl(var(--accent-purple)/0.7)] relative overflow-hidden group"
                     onClick={() => playSound("click")}
                   >
                     <span className="relative z-10 flex items-center">
@@ -619,7 +745,7 @@ export default function Home() {
                 </Link>
                 {/* Pixel effect on hover */}
                 {isHovering === "games" && (
-                  <div className="absolute -bottom-4 -right-4 w-8 h-8 bg-yellow-400"></div>
+                  <div className="absolute -bottom-4 -right-4 w-8 h-8 bg-[hsl(var(--accent-yellow))]"></div>
                 )}
               </motion.div>
 
@@ -637,7 +763,7 @@ export default function Home() {
               >
                 <Link href="/tournaments">
                   <AnimatedButton
-                    className="bg-transparent text-white px-12 py-5 text-2xl font-bold border-4 border-white relative overflow-hidden group"
+                    className="bg-transparent text-foreground px-12 py-5 text-2xl font-bold border-4 border-foreground relative overflow-hidden group"
                     onClick={() => playSound("click")}
                   >
                     <span className="relative z-10 flex items-center">
@@ -647,7 +773,7 @@ export default function Home() {
                   </AnimatedButton>
                 </Link>
                 {isHovering === "tournaments" && (
-                  <div className="absolute -bottom-4 -right-4 w-8 h-8 bg-purple-500"></div>
+                  <div className="absolute -bottom-4 -right-4 w-8 h-8 bg-[hsl(var(--accent-purple))]"></div>
                 )}
               </motion.div>
             </div>
@@ -660,7 +786,7 @@ export default function Home() {
                 className="mt-10"
               >
                 <button
-                  className="text-base text-yellow-400 flex items-center mx-auto hover:underline"
+                  className="text-base text-[hsl(var(--accent-yellow))] flex items-center mx-auto hover:underline"
                   onClick={() => {
                     setShowWalletModal(true);
                     playSound("click");
@@ -680,29 +806,41 @@ export default function Home() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.5 }}
           >
-            <div className="bg-black/50 border-3 border-white p-6">
-              <div className="text-4xl font-bold text-yellow-400">24</div>
-              <div className="text-base text-gray-400 mt-2">GAMES</div>
+            <div className="bg-background/50 border-3 border-foreground p-6 retro-shadow">
+              <div className="text-4xl font-bold text-[hsl(var(--accent-yellow))]">
+                24
+              </div>
+              <div className="text-base text-foreground/70 mt-2">GAMES</div>
             </div>
-            <div className="bg-black/50 border-3 border-white p-6">
-              <div className="text-4xl font-bold text-yellow-400">5.2K</div>
-              <div className="text-base text-gray-400 mt-2">PLAYERS</div>
+            <div className="bg-background/50 border-3 border-foreground p-6 retro-shadow">
+              <div className="text-4xl font-bold text-[hsl(var(--accent-yellow))]">
+                5.2K
+              </div>
+              <div className="text-base text-foreground/70 mt-2">PLAYERS</div>
             </div>
-            <div className="bg-black/50 border-3 border-white p-6">
-              <div className="text-4xl font-bold text-yellow-400">128</div>
-              <div className="text-base text-gray-400 mt-2">TOURNAMENTS</div>
+            <div className="bg-background/50 border-3 border-foreground p-6 retro-shadow">
+              <div className="text-4xl font-bold text-[hsl(var(--accent-yellow))]">
+                128
+              </div>
+              <div className="text-base text-foreground/70 mt-2">
+                TOURNAMENTS
+              </div>
             </div>
-            <div className="bg-black/50 border-3 border-white p-6">
-              <div className="text-4xl font-bold text-yellow-400">45 ETH</div>
-              <div className="text-base text-gray-400 mt-2">PRIZE POOL</div>
+            <div className="bg-background/50 border-3 border-foreground p-6 retro-shadow">
+              <div className="text-4xl font-bold text-[hsl(var(--accent-yellow))]">
+                45 ETH
+              </div>
+              <div className="text-base text-foreground/70 mt-2">
+                PRIZE POOL
+              </div>
             </div>
           </motion.div>
         </section>
 
         {/* Game Showcase Section */}
-        <section className="py-16 px-4 border-y-4 border-white relative overflow-hidden">
+        <section className="py-16 px-4 border-y-4 border-foreground relative overflow-hidden">
           {/* Section background */}
-          <div className="absolute inset-0 bg-gradient-to-b from-black/0 via-purple-900/10 to-black/0 pointer-events-none"></div>
+          <div className="absolute inset-0 bg-gradient-to-b from-background/0 via-[hsl(var(--accent-purple))/10] to-background/0 pointer-events-none"></div>
 
           <div className="max-w-7xl mx-auto relative">
             {/* Section tabs */}
@@ -710,8 +848,8 @@ export default function Home() {
               <AnimatedButton
                 className={`px-8 py-4 mr-3 whitespace-nowrap text-lg ${
                   activeSection === "featured"
-                    ? "bg-white text-black"
-                    : "bg-transparent text-white border-3 border-white"
+                    ? "bg-foreground text-background"
+                    : "bg-transparent text-foreground border-3 border-foreground"
                 }`}
                 onClick={() => {
                   setActiveSection("featured");
@@ -724,8 +862,8 @@ export default function Home() {
               <AnimatedButton
                 className={`px-8 py-4 mr-3 whitespace-nowrap text-lg ${
                   activeSection === "tournaments"
-                    ? "bg-white text-black"
-                    : "bg-transparent text-white border-3 border-white"
+                    ? "bg-foreground text-background"
+                    : "bg-transparent text-foreground border-3 border-foreground"
                 }`}
                 onClick={() => {
                   setActiveSection("tournaments");
@@ -738,8 +876,8 @@ export default function Home() {
               <AnimatedButton
                 className={`px-8 py-4 mr-3 whitespace-nowrap text-lg ${
                   activeSection === "leaderboard"
-                    ? "bg-white text-black"
-                    : "bg-transparent text-white border-3 border-white"
+                    ? "bg-foreground text-background"
+                    : "bg-transparent text-foreground border-3 border-foreground"
                 }`}
                 onClick={() => {
                   setActiveSection("leaderboard");
@@ -775,7 +913,7 @@ export default function Home() {
                   <div className="text-center mt-12">
                     <Link href="/games">
                       <AnimatedButton
-                        className="text-lg border-3 border-white px-8 py-4 hover:border-yellow-400 hover:text-yellow-400"
+                        className="text-lg border-3 border-foreground px-8 py-4 hover:border-[hsl(var(--accent-yellow))] hover:text-[hsl(var(--accent-yellow))]"
                         onHover={() => playSound("hover")}
                         onClick={() => playSound("click")}
                       >
@@ -810,7 +948,7 @@ export default function Home() {
                   <div className="text-center mt-12">
                     <Link href="/tournaments">
                       <AnimatedButton
-                        className="text-lg border-3 border-white px-8 py-4 hover:border-yellow-400 hover:text-yellow-400"
+                        className="text-lg border-3 border-foreground px-8 py-4 hover:border-[hsl(var(--accent-yellow))] hover:text-[hsl(var(--accent-yellow))]"
                         onHover={() => playSound("hover")}
                         onClick={() => playSound("click")}
                       >
@@ -831,8 +969,8 @@ export default function Home() {
                   exit={{ opacity: 0, y: -20 }}
                   transition={{ duration: 0.3 }}
                 >
-                  <div className="bg-black/50 border-3 border-white p-6">
-                    <div className="grid grid-cols-5 gap-6 font-bold mb-6 text-yellow-400 border-b-3 border-white pb-4 text-lg">
+                  <div className="bg-background/50 border-3 border-foreground p-6 retro-shadow">
+                    <div className="grid grid-cols-5 gap-6 font-bold mb-6 text-[hsl(var(--accent-yellow))] border-b-3 border-foreground pb-4 text-lg">
                       <div>RANK</div>
                       <div>PLAYER</div>
                       <div>GAME</div>
@@ -843,15 +981,15 @@ export default function Home() {
                     {leaderboardData.map((entry, index) => (
                       <motion.div
                         key={index}
-                        className="grid grid-cols-5 gap-6 py-4 border-b-2 border-gray-800 text-lg"
+                        className="grid grid-cols-5 gap-6 py-4 border-b-2 border-foreground/20 text-lg"
                         whileHover={{
-                          backgroundColor: "rgba(255, 255, 255, 0.1)",
+                          backgroundColor: "hsl(var(--foreground) / 0.1)",
                         }}
                         onMouseEnter={() => playSound("hover")}
                       >
                         <div className="font-bold flex items-center">
                           {entry.rank === 1 && (
-                            <Award className="h-5 w-5 mr-2 text-yellow-400" />
+                            <Award className="h-5 w-5 mr-2 text-[hsl(var(--accent-yellow))]" />
                           )}
                           {entry.rank === 2 && (
                             <Award className="h-5 w-5 mr-2 text-gray-400" />
@@ -861,12 +999,12 @@ export default function Home() {
                           )}
                           {entry.rank}
                         </div>
-                        <div className="text-white">{entry.player}</div>
-                        <div className="text-gray-400">{entry.game}</div>
-                        <div className="text-white">
+                        <div className="text-foreground">{entry.player}</div>
+                        <div className="text-foreground/70">{entry.game}</div>
+                        <div className="text-foreground">
                           {entry.score.toLocaleString()}
                         </div>
-                        <div className="text-green-400">
+                        <div className="text-[hsl(var(--accent-green))]">
                           {entry.earnings} ETH
                         </div>
                       </motion.div>
@@ -876,7 +1014,7 @@ export default function Home() {
                   <div className="text-center mt-12">
                     <Link href="/leaderboard">
                       <AnimatedButton
-                        className="text-lg border-3 border-white px-8 py-4 hover:border-yellow-400 hover:text-yellow-400"
+                        className="text-lg border-3 border-foreground px-8 py-4 hover:border-[hsl(var(--accent-yellow))] hover:text-[hsl(var(--accent-yellow))]"
                         onHover={() => playSound("hover")}
                         onClick={() => playSound("click")}
                       >
@@ -901,7 +1039,7 @@ export default function Home() {
               >
                 HOW IT WORKS
               </h2>
-              <p className="text-xl text-gray-400 max-w-3xl mx-auto">
+              <p className="text-xl text-foreground/70 max-w-3xl mx-auto">
                 Empire of Bits combines retro arcade gaming with Web3 technology
                 for a unique gaming experience.
               </p>
@@ -909,48 +1047,48 @@ export default function Home() {
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
               <motion.div
-                className="bg-black border-3 border-white p-8 relative"
+                className="bg-background border-3 border-foreground p-8 relative retro-shadow"
                 whileHover={{ y: -8 }}
                 onMouseEnter={() => playSound("hover")}
               >
-                <div className="absolute -top-6 -left-6 w-12 h-12 bg-purple-500 flex items-center justify-center text-2xl font-bold">
+                <div className="absolute -top-6 -left-6 w-12 h-12 bg-[hsl(var(--accent-purple))] flex items-center justify-center text-2xl font-bold text-white">
                   1
                 </div>
-                <Wallet className="h-16 w-16 mb-6 text-yellow-400" />
+                <Wallet className="h-16 w-16 mb-6 text-[hsl(var(--accent-yellow))]" />
                 <h3 className="text-2xl font-bold mb-4">CONNECT WALLET</h3>
-                <p className="text-lg text-gray-400">
+                <p className="text-lg text-foreground/70">
                   Link your crypto wallet to deposit funds, collect winnings,
                   and track your gaming assets.
                 </p>
               </motion.div>
 
               <motion.div
-                className="bg-black border-3 border-white p-8 relative"
+                className="bg-background border-3 border-foreground p-8 relative retro-shadow"
                 whileHover={{ y: -8 }}
                 onMouseEnter={() => playSound("hover")}
               >
-                <div className="absolute -top-6 -left-6 w-12 h-12 bg-purple-500 flex items-center justify-center text-2xl font-bold">
+                <div className="absolute -top-6 -left-6 w-12 h-12 bg-[hsl(var(--accent-purple))] flex items-center justify-center text-2xl font-bold text-white">
                   2
                 </div>
-                <Gamepad2 className="h-16 w-16 mb-6 text-yellow-400" />
+                <Gamepad2 className="h-16 w-16 mb-6 text-[hsl(var(--accent-yellow))]" />
                 <h3 className="text-2xl font-bold mb-4">PLAY & BET</h3>
-                <p className="text-lg text-gray-400">
+                <p className="text-lg text-foreground/70">
                   Choose from our collection of retro-style games, place your
                   bets, and compete against other players.
                 </p>
               </motion.div>
 
               <motion.div
-                className="bg-black border-3 border-white p-8 relative"
+                className="bg-background border-3 border-foreground p-8 relative retro-shadow"
                 whileHover={{ y: -8 }}
                 onMouseEnter={() => playSound("hover")}
               >
-                <div className="absolute -top-6 -left-6 w-12 h-12 bg-purple-500 flex items-center justify-center text-2xl font-bold">
+                <div className="absolute -top-6 -left-6 w-12 h-12 bg-[hsl(var(--accent-purple))] flex items-center justify-center text-2xl font-bold text-white">
                   3
                 </div>
-                <Coins className="h-16 w-16 mb-6 text-yellow-400" />
+                <Coins className="h-16 w-16 mb-6 text-[hsl(var(--accent-yellow))]" />
                 <h3 className="text-2xl font-bold mb-4">WIN CRYPTO</h3>
-                <p className="text-lg text-gray-400">
+                <p className="text-lg text-foreground/70">
                   Win matches and tournaments to earn cryptocurrency and
                   exclusive NFT rewards.
                 </p>
@@ -960,10 +1098,10 @@ export default function Home() {
         </section>
 
         {/* Live Games Section */}
-        <section className="py-16 px-4 bg-gradient-to-b from-black to-purple-900/20 border-t-4 border-white">
+        <section className="py-16 px-4 bg-gradient-to-b from-background to-[hsl(var(--accent-purple))/20] border-t-4 border-foreground">
           <div className="max-w-7xl mx-auto">
             <h2 className="text-4xl font-bold mb-10 flex items-center">
-              <Users className="mr-3 h-8 w-8 text-yellow-400" />
+              <Users className="mr-3 h-8 w-8 text-[hsl(var(--accent-yellow))]" />
               LIVE GAMES
               <span className="ml-4 inline-flex h-4 w-4 relative">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
@@ -975,12 +1113,12 @@ export default function Home() {
               {[1, 2].map((stream) => (
                 <motion.div
                   key={stream}
-                  className="bg-black border-3 border-white p-6 arcade-card"
+                  className="bg-background border-3 border-foreground p-6 arcade-card"
                   whileHover={{ scale: 1.03 }}
                   onMouseEnter={() => playSound("hover")}
                 >
-                  <div className="bg-gray-900 h-72 mb-6 flex items-center justify-center relative overflow-hidden">
-                    <div className="absolute top-3 right-3 bg-red-600 px-3 py-1.5 text-sm font-bold flex items-center">
+                  <div className="bg-secondary h-72 mb-6 flex items-center justify-center relative overflow-hidden">
+                    <div className="absolute top-3 right-3 bg-red-600 px-3 py-1.5 text-sm font-bold flex items-center text-white">
                       <span className="mr-2 inline-flex h-2 w-2 relative">
                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
                         <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
@@ -988,14 +1126,14 @@ export default function Home() {
                       LIVE
                     </div>
 
-                    <div className="absolute bottom-3 left-3 bg-black/80 px-3 py-1.5 text-sm font-bold">
+                    <div className="absolute bottom-3 left-3 bg-background/80 px-3 py-1.5 text-sm font-bold">
                       <div className="flex items-center">
-                        <Coins className="h-4 w-4 mr-2 text-yellow-400" />
+                        <Coins className="h-4 w-4 mr-2 text-[hsl(var(--accent-yellow))]" />
                         PRIZE POOL: 0.{Math.floor(Math.random() * 90) + 10} ETH
                       </div>
                     </div>
 
-                    <div className="absolute bottom-3 right-3 bg-black/80 px-3 py-1.5 text-sm font-bold">
+                    <div className="absolute bottom-3 right-3 bg-background/80 px-3 py-1.5 text-sm font-bold">
                       <div className="flex items-center">
                         <Clock className="h-4 w-4 mr-2" />
                         {Math.floor(Math.random() * 10) + 2}:
@@ -1020,19 +1158,19 @@ export default function Home() {
                       <h3 className="text-2xl font-bold flex items-center">
                         {stream === 1 ? "CRYPTO RACER" : "PIXEL WARRIORS"}
                         {stream === 1 && (
-                          <span className="ml-3 inline-block px-2 py-1 bg-green-500 text-black text-sm font-bold">
+                          <span className="ml-3 inline-block px-2 py-1 bg-[hsl(var(--accent-green))] text-black text-sm font-bold">
                             POPULAR
                           </span>
                         )}
                       </h3>
-                      <p className="text-lg text-gray-400 flex items-center mt-2">
+                      <p className="text-lg text-foreground/70 flex items-center mt-2">
                         <Users className="h-4 w-4 mr-2" />
                         {stream === 1 ? "8" : "2"} PLAYERS • ROUND{" "}
                         {Math.floor(Math.random() * 5) + 1}
                       </p>
                     </div>
                     <AnimatedButton
-                      className="bg-purple-700 border-3 border-purple-500 px-5 py-3 text-lg"
+                      className="bg-[hsl(var(--accent-purple))] border-3 border-[hsl(var(--accent-purple)/0.7)] px-5 py-3 text-lg text-white"
                       onClick={() => playSound("click")}
                     >
                       SPECTATE
@@ -1047,15 +1185,15 @@ export default function Home() {
         {/* CTA Section */}
         <section className="py-16 md:py-28 px-4 text-center relative overflow-hidden">
           <div className="absolute inset-0 pointer-events-none">
-            <div className="absolute top-0 left-0 w-full h-20 bg-gradient-to-b from-black to-transparent"></div>
-            <div className="absolute bottom-0 left-0 w-full h-20 bg-gradient-to-t from-black to-transparent"></div>
+            <div className="absolute top-0 left-0 w-full h-20 bg-gradient-to-b from-background to-transparent"></div>
+            <div className="absolute bottom-0 left-0 w-full h-20 bg-gradient-to-t from-background to-transparent"></div>
 
             {/* Animated particles */}
             <div className="absolute inset-0">
               {Array.from({ length: 30 }).map((_, i) => (
                 <div
                   key={i}
-                  className="absolute w-3 h-3 bg-white opacity-20 rotate-45"
+                  className="absolute w-3 h-3 bg-foreground opacity-20 rotate-45"
                   style={{
                     top: `${Math.random() * 100}%`,
                     left: `${Math.random() * 100}%`,
@@ -1075,9 +1213,9 @@ export default function Home() {
               whileInView={{ scale: 1, opacity: 1 }}
               transition={{ duration: 0.5 }}
               viewport={{ once: true }}
-              className="bg-black border-4 border-white p-10 md:p-16"
+              className="bg-background border-4 border-foreground p-10 md:p-16 retro-shadow"
             >
-              <Sparkles className="h-16 w-16 mx-auto mb-8 text-yellow-400" />
+              <Sparkles className="h-16 w-16 mx-auto mb-8 text-[hsl(var(--accent-yellow))]" />
 
               <h2
                 className="text-4xl md:text-5xl font-bold mb-8 glitch-text"
@@ -1086,14 +1224,14 @@ export default function Home() {
                 JOIN THE ARCADE REVOLUTION
               </h2>
 
-              <p className="text-2xl text-gray-300 mb-10 max-w-3xl mx-auto">
+              <p className="text-2xl text-foreground/80 mb-10 max-w-3xl mx-auto">
                 Experience the fusion of retro gaming and blockchain technology.
                 Play, compete, and earn like never before.
               </p>
 
               {!walletConnected ? (
                 <ParticleButton
-                  className="bg-purple-700 text-white px-12 py-5 text-2xl font-bold border-4 border-purple-500 relative overflow-hidden group"
+                  className="bg-[hsl(var(--accent-purple))] text-white px-12 py-5 text-2xl font-bold border-4 border-[hsl(var(--accent-purple)/0.7)] relative overflow-hidden group"
                   onHover={() => playSound("hover")}
                   onClick={() => {
                     setShowWalletModal(true);
@@ -1108,7 +1246,7 @@ export default function Home() {
               ) : (
                 <Link href="/games">
                   <ParticleButton
-                    className="bg-purple-700 text-white px-12 py-5 text-2xl font-bold border-4 border-purple-500 relative overflow-hidden group"
+                    className="bg-[hsl(var(--accent-purple))] text-white px-12 py-5 text-2xl font-bold border-4 border-[hsl(var(--accent-purple)/0.7)] relative overflow-hidden group"
                     onHover={() => playSound("hover")}
                     onClick={() => playSound("click")}
                   >
@@ -1125,25 +1263,30 @@ export default function Home() {
       </main>
 
       {/* Footer */}
-      <footer className="bg-black border-t-4 border-white py-16 px-4">
+      <footer className="bg-background border-t-4 border-foreground py-16 px-4">
         <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-10">
           <div className="md:col-span-2">
             <div className="flex items-center mb-6">
-              <Gamepad2 className="h-10 w-10 mr-3 text-white" />
+              <Gamepad2 className="h-10 w-10 mr-3 text-foreground" />
               <h3 className="text-3xl font-bold tracking-tight">
                 <span className="inline-block">EMPIRE</span>
-                <span className="inline-block text-yellow-400"> OF </span>
-                <span className="inline-block text-purple-500">BITS</span>
+                <span className="inline-block text-[hsl(var(--accent-yellow))]">
+                  {" "}
+                  OF{" "}
+                </span>
+                <span className="inline-block text-[hsl(var(--accent-purple))]">
+                  BITS
+                </span>
               </h3>
             </div>
-            <p className="text-xl text-gray-400 mb-8">
+            <p className="text-xl text-foreground/70 mb-8">
               The ultimate Web3 arcade gaming platform. Compete in retro-style
               games, bet cryptocurrency, and win big in tournaments.
             </p>
             <div className="flex space-x-5">
               <motion.a
                 href="#"
-                className="w-12 h-12 border-3 border-white flex items-center justify-center hover:border-yellow-400 transition-colors arcade-btn-large"
+                className="w-12 h-12 border-3 border-foreground flex items-center justify-center hover:border-[hsl(var(--accent-yellow))] transition-colors arcade-btn-large"
                 whileHover={{ scale: 1.1, rotate: 5 }}
                 whileTap={{ scale: 0.95 }}
                 onMouseEnter={() => playSound("hover")}
@@ -1160,7 +1303,7 @@ export default function Home() {
               </motion.a>
               <motion.a
                 href="#"
-                className="w-12 h-12 border-3 border-white flex items-center justify-center hover:border-yellow-400 transition-colors arcade-btn-large"
+                className="w-12 h-12 border-3 border-foreground flex items-center justify-center hover:border-[hsl(var(--accent-yellow))] transition-colors arcade-btn-large"
                 whileHover={{ scale: 1.1, rotate: -5 }}
                 whileTap={{ scale: 0.95 }}
                 onMouseEnter={() => playSound("hover")}
@@ -1181,24 +1324,7 @@ export default function Home() {
               </motion.a>
               <motion.a
                 href="#"
-                className="w-12 h-12 border-3 border-white flex items-center justify-center hover:border-yellow-400 transition-colors arcade-btn-large"
-                whileHover={{ scale: 1.1, rotate: 5 }}
-                whileTap={{ scale: 0.95 }}
-                onMouseEnter={() => playSound("hover")}
-                onClick={() => playSound("click")}
-              >
-                <svg
-                  className="h-6 w-6"
-                  fill="currentColor"
-                  viewBox="0 0 24 24"
-                  aria-hidden="true"
-                >
-                  <path d="M8.29 20.251c7.547 0 11.675-6.253 11.675-11.675 0-.178 0-.355-.012-.53A8.348 8.348 0 0022 5.92a8.19 8.19 0 01-2.357.646 4.118 4.118 0 001.804-2.27 8.224 8.224 0 01-2.605.996 4.107 4.107 0 00-6.993 3.743 11.65 11.65 0 01-8.457-4.287 4.106 4.106 0 001.27 5.477A4.072 4.072 0 012.8 9.713v.052a4.105 4.105 0 003.292 4.022 4.095 4.095 0 01-1.853.07 4.108 4.108 0 003.834 2.85A8.233 8.233 0 012 18.407a11.616 11.616 0 006.29 1.84" />
-                </svg>
-              </motion.a>
-              <motion.a
-                href="#"
-                className="w-12 h-12 border-3 border-white flex items-center justify-center hover:border-yellow-400 transition-colors arcade-btn-large"
+                className="w-12 h-12 border-3 border-foreground flex items-center justify-center hover:border-[hsl(var(--accent-yellow))] transition-colors arcade-btn-large"
                 whileHover={{ scale: 1.1, rotate: -5 }}
                 whileTap={{ scale: 0.95 }}
                 onMouseEnter={() => playSound("hover")}
