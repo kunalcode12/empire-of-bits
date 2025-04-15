@@ -14,10 +14,15 @@ import {
   Users,
   Trophy,
   Clock,
+  X,
+  Menu,
 } from "lucide-react";
 import { useMobile } from "@/hooks/use-mobile";
 import { AnimatedButton } from "@/components/animated-button";
 import { ParticleButton } from "@/components/particle-button";
+import BuyPointsDialog from "@/components/buyPointsDialog";
+import SellPointsDialog from "@/components/sellPointsDialog";
+import { useToast } from "@/components/ui/use-toast";
 
 export default function GamesPage() {
   const [selectedCategory, setSelectedCategory] = useState("All");
@@ -30,6 +35,11 @@ export default function GamesPage() {
   const audioRef = useRef<HTMLAudioElement>(null);
   const isMobile = useMobile();
   const [cursorPosition, setCursorPosition] = useState({ x: 0, y: 0 });
+  const [showBuyDialog, setShowBuyDialog] = useState(false);
+  const [showSellDialog, setShowSellDialog] = useState(false);
+  const [points, setPoints] = useState(0);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const { toast } = useToast();
 
   const categories = [
     "All",
@@ -44,18 +54,19 @@ export default function GamesPage() {
   const games = [
     {
       id: 1,
-      title: "CRYPTO RACER",
-      category: "Racing",
+      title: "Candy Crush",
+      category: "Arcade",
       minBet: 0.01,
       maxPlayers: 8,
       prize: 0.25,
       players: 6,
       status: "live",
       featured: true,
+      route: "/levels-candycrush",
     },
     {
       id: 2,
-      title: "PIXEL WARRIORS",
+      title: "Battle Ship",
       category: "Fighting",
       minBet: 0.05,
       maxPlayers: 2,
@@ -63,10 +74,11 @@ export default function GamesPage() {
       players: 2,
       status: "live",
       featured: true,
+      route: "http://localhost:4000/",
     },
     {
       id: 3,
-      title: "NFT HUNTERS",
+      title: "Space Invaders",
       category: "Adventure",
       minBet: 0.02,
       maxPlayers: 4,
@@ -74,10 +86,11 @@ export default function GamesPage() {
       players: 1,
       status: "waiting",
       featured: true,
+      route: "http://localhost:4001/",
     },
     {
       id: 4,
-      title: "BLOCKCHAIN BLITZ",
+      title: "Platformer",
       category: "Action",
       minBet: 0.03,
       maxPlayers: 6,
@@ -85,61 +98,7 @@ export default function GamesPage() {
       players: 4,
       status: "live",
       featured: false,
-    },
-    {
-      id: 5,
-      title: "CRYPTO PUZZLER",
-      category: "Puzzle",
-      minBet: 0.01,
-      maxPlayers: 2,
-      prize: 0.05,
-      players: 0,
-      status: "waiting",
-      featured: false,
-    },
-    {
-      id: 6,
-      title: "TOKEN TACTICS",
-      category: "Strategy",
-      minBet: 0.04,
-      maxPlayers: 4,
-      prize: 0.2,
-      players: 2,
-      status: "live",
-      featured: false,
-    },
-    {
-      id: 7,
-      title: "DEFI DEFENDER",
-      category: "Action",
-      minBet: 0.02,
-      maxPlayers: 3,
-      prize: 0.1,
-      players: 1,
-      status: "waiting",
-      featured: false,
-    },
-    {
-      id: 8,
-      title: "META RACER",
-      category: "Racing",
-      minBet: 0.03,
-      maxPlayers: 6,
-      prize: 0.15,
-      players: 3,
-      status: "live",
-      featured: false,
-    },
-    {
-      id: 9,
-      title: "CRYPTO KOMBAT",
-      category: "Fighting",
-      minBet: 0.05,
-      maxPlayers: 2,
-      prize: 0.12,
-      players: 0,
-      status: "waiting",
-      featured: false,
+      route: "https://platformer-game-delta.vercel.app/",
     },
   ];
 
@@ -157,6 +116,128 @@ export default function GamesPage() {
       audioRef.current
         .play()
         .catch((e) => console.log("Audio play prevented:", e));
+    }
+  };
+
+  const fetchUserPoints = async () => {
+    // if (!walletConnected) return;
+    // console.log(walletConnected);
+    console.log("Fetching user points...");
+    try {
+      const walletAddress = localStorage.getItem("walletAddress");
+
+      // Make API call to your backend
+      const response = await fetch("http://127.0.0.1:3001/api/v1/users", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          userId: walletAddress,
+        }),
+      });
+
+      const data = await response.json();
+      console.log(data);
+
+      if (data.success) {
+        setPoints(data.data.points);
+      } else {
+        console.error("Failed to fetch user:", data.message);
+      }
+    } catch (error) {
+      console.error("Error in user data operation:", error);
+    } finally {
+    }
+  };
+
+  useEffect(() => {
+    fetchUserPoints();
+  }, []);
+
+  const handleBuyPoints = async (amount: number) => {
+    try {
+      // In a real application, you would make an API call here
+      // const response = await fetch('/api/user/points/buy', {
+      //   method: 'POST',
+      //   headers: { 'Content-Type': 'application/json' },
+      //   body: JSON.stringify({ amount })
+      // });
+      // const data = await response.json();
+      // if (!response.ok) throw new Error(data.message || 'Failed to buy points');
+
+      // Simulating successful API response
+      const newPoints = points + amount;
+      setPoints(newPoints);
+      setShowBuyDialog(false);
+
+      // if (onPointsUpdate) {
+      //   onPointsUpdate(newPoints);
+      // }
+
+      toast({
+        title: "Points Purchased!",
+        description: `You have successfully purchased ${amount} points.`,
+        duration: 3000,
+      });
+      playSound("success");
+    } catch (error) {
+      console.error("Error buying points:", error);
+      toast({
+        title: "Purchase Failed",
+        description: "There was an error processing your purchase.",
+        variant: "destructive",
+        duration: 3000,
+      });
+      playSound("error");
+    }
+  };
+
+  const handleSellPoints = async (amount: number) => {
+    if (points >= amount) {
+      try {
+        // In a real application, you would make an API call here
+        // const response = await fetch('/api/user/points/sell', {
+        //   method: 'POST',
+        //   headers: { 'Content-Type': 'application/json' },
+        //   body: JSON.stringify({ amount })
+        // });
+        // const data = await response.json();
+        // if (!response.ok) throw new Error(data.message || 'Failed to sell points');
+
+        // Simulating successful API response
+        const newPoints = points - amount;
+        setPoints(newPoints);
+        setShowSellDialog(false);
+
+        // if (onPointsUpdate) {
+        //   onPointsUpdate(newPoints);
+        // }
+
+        toast({
+          title: "Points Sold!",
+          description: `You have successfully sold ${amount} points.`,
+          duration: 3000,
+        });
+        playSound("success");
+      } catch (error) {
+        console.error("Error selling points:", error);
+        toast({
+          title: "Transaction Failed",
+          description: "There was an error processing your transaction.",
+          variant: "destructive",
+          duration: 3000,
+        });
+        playSound("error");
+      }
+    } else {
+      toast({
+        title: "Insufficient Points",
+        description: "You don't have enough points to sell.",
+        variant: "destructive",
+        duration: 3000,
+      });
+      playSound("error");
     }
   };
 
@@ -221,6 +302,7 @@ export default function GamesPage() {
               href="/"
               className="flex items-center arcade-btn-large"
               onClick={() => playSound("click")}
+              onMouseEnter={() => playSound("hover")}
             >
               <ChevronLeft className="h-8 w-8 mr-3" />
               <span className="text-xl">BACK</span>
@@ -236,6 +318,50 @@ export default function GamesPage() {
 
           {/* Wallet Section */}
           <div className="flex items-center gap-4">
+            {/* Points Display and Buttons */}
+            <div className="hidden md:flex items-center gap-2 bg-gray-900 p-2 border-3 border-white rounded-lg">
+              <div className="flex items-center">
+                <div className="flex items-center mr-3">
+                  <Image
+                    src="/token.png"
+                    width={24}
+                    height={24}
+                    alt="Points"
+                    className="mr-1"
+                  />
+                  <span className="text-base font-bold">{points}</span>
+                </div>
+
+                <div className="flex space-x-2">
+                  <motion.button
+                    className="px-3 py-1 bg-green-600 text-white text-sm font-bold rounded-md"
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => {
+                      setShowBuyDialog(true);
+                      playSound("click");
+                    }}
+                    onMouseEnter={() => playSound("hover")}
+                  >
+                    BUY
+                  </motion.button>
+
+                  <motion.button
+                    className="px-3 py-1 bg-red-600 text-white text-sm font-bold rounded-md"
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => {
+                      setShowSellDialog(true);
+                      playSound("click");
+                    }}
+                    onMouseEnter={() => playSound("hover")}
+                  >
+                    SELL
+                  </motion.button>
+                </div>
+              </div>
+            </div>
+
             {walletConnected ? (
               <motion.div
                 className="hidden md:flex items-center gap-3 bg-gray-900 p-3 border-3 border-white arcade-btn-large"
@@ -264,14 +390,88 @@ export default function GamesPage() {
                   playSound("click");
                 }}
                 onHover={() => playSound("hover")}
-                className="hidden md:flex items-center gap-3 bg-purple-700 p-3 border-3 border-purple-500 text-base font-bold"
+                className="hidden md:flex items-center gap-3 bg-purple-700 p-3 border-3 border-purple-500 text-base font-bold text-white"
               >
                 <Wallet className="h-6 w-6" />
                 <span>CONNECT WALLET</span>
               </ParticleButton>
             )}
+
+            {/* Mobile menu button */}
+            <motion.button
+              className="md:hidden arcade-btn-large p-3 border-3 border-white"
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => {
+                setMenuOpen(!menuOpen);
+                playSound("click");
+              }}
+            >
+              {menuOpen ? (
+                <X className="h-7 w-7" />
+              ) : (
+                <Menu className="h-7 w-7" />
+              )}
+            </motion.button>
           </div>
         </div>
+
+        {/* Mobile menu */}
+        <AnimatePresence>
+          {menuOpen && (
+            <motion.div
+              className="md:hidden bg-black border-t-2 border-white/20"
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+            >
+              <nav className="p-4">
+                <ul className="space-y-4">
+                  {/* Points for mobile */}
+                  <li className="py-2">
+                    <div className="flex flex-col space-y-2">
+                      <div className="flex items-center">
+                        <Image
+                          src="/token.png"
+                          width={24}
+                          height={24}
+                          alt="Points"
+                          className="mr-2"
+                        />
+                        <span className="text-base font-bold">
+                          POINTS: {points}
+                        </span>
+                      </div>
+                      <div className="flex space-x-2">
+                        <button
+                          className="px-3 py-1 bg-green-600 text-white text-sm font-bold rounded-md w-full"
+                          onClick={() => {
+                            setShowBuyDialog(true);
+                            setMenuOpen(false);
+                            playSound("click");
+                          }}
+                        >
+                          BUY POINTS
+                        </button>
+
+                        <button
+                          className="px-3 py-1 bg-red-600 text-white text-sm font-bold rounded-md w-full"
+                          onClick={() => {
+                            setShowSellDialog(true);
+                            setMenuOpen(false);
+                            playSound("click");
+                          }}
+                        >
+                          SELL POINTS
+                        </button>
+                      </div>
+                    </div>
+                  </li>
+                </ul>
+              </nav>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </header>
 
       {/* Wallet Connection Modal */}
@@ -494,12 +694,27 @@ export default function GamesPage() {
                       </div>
                     )}
                   </div>
-
-                  <Link href={`/games/${game.id}`}>
-                    <ParticleButton className="arcade-btn bg-purple-700 text-white px-5 py-3 w-full border-3 border-purple-600 hover:bg-purple-600 transition-colors text-lg">
-                      {game.status === "live" ? "JOIN GAME" : "PLAY NOW"}
-                    </ParticleButton>
-                  </Link>
+                  {game.title === "Candy Crush" ? (
+                    <Link href={game.route}>
+                      <ParticleButton className="arcade-btn bg-purple-700 text-white px-5 py-3 w-full border-3 border-purple-600 hover:bg-purple-600 transition-colors text-lg">
+                        {game.status === "live" ? "JOIN GAME" : "PLAY NOW"}
+                      </ParticleButton>
+                    </Link>
+                  ) : (
+                    <Link
+                      href={{
+                        pathname: game.route,
+                        query: { query: "wallet-address-here" },
+                      }}
+                      passHref
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <ParticleButton className="arcade-btn bg-purple-700 text-white px-5 py-3 w-full border-3 border-purple-600 hover:bg-purple-600 transition-colors text-lg">
+                        {game.status === "live" ? "JOIN GAME" : "PLAY NOW"}
+                      </ParticleButton>
+                    </Link>
+                  )}
                 </div>
               </motion.div>
             ))}
@@ -525,6 +740,21 @@ export default function GamesPage() {
           )}
         </div>
       </div>
+
+      <BuyPointsDialog
+        isOpen={showBuyDialog}
+        onClose={() => setShowBuyDialog(false)}
+        onBuy={handleBuyPoints}
+        currentPoints={points}
+      />
+
+      {/* Sell Points Dialog */}
+      <SellPointsDialog
+        isOpen={showSellDialog}
+        onClose={() => setShowSellDialog(false)}
+        onSell={handleSellPoints}
+        currentPoints={points}
+      />
 
       {/* Footer */}
       <footer className="bg-black border-t-4 border-white py-10 px-4 mt-16 relative z-20">

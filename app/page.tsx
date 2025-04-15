@@ -29,6 +29,9 @@ import { ParticleButton } from "@/components/particle-button";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useTheme } from "@/components/theme-provider";
 import { useToast } from "@/components/ui/use-toast";
+import Header from "@/components/Header";
+import RetroWelcomePopup from "@/components/retroWelcomePopup";
+import RetroGameCompletionPopup from "@/components/GameComplitionPopup";
 
 export default function Home() {
   const [isHovering, setIsHovering] = useState("");
@@ -40,7 +43,17 @@ export default function Home() {
   const [cryptoBalance, setCryptoBalance] = useState("0.00");
   const [tokenBalance, setTokenBalance] = useState("0");
   const [scrolled, setScrolled] = useState(false);
+  const [userPoints, setUserPoints] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
   const [showNotification, setShowNotification] = useState(false);
+  const [showRetroWelcome, setShowRetroWelcome] = useState(false);
+  const [showConnectWalletPrompt, setShowConnectWalletPrompt] = useState(false);
+  const [gameCompletionInfo, setGameCompletionInfo] = useState<{
+    pointsEarned: number;
+    gameWon: boolean;
+    gameName: string;
+  } | null>(null);
+
   const [notifications, setNotifications] = useState([
     {
       id: 1,
@@ -159,6 +172,14 @@ export default function Home() {
     },
   ];
 
+  const handleGameInteraction = () => {
+    if (!walletConnected) {
+      setShowConnectWalletPrompt(true);
+      // Auto-hide prompt after 5 seconds
+      setTimeout(() => setShowConnectWalletPrompt(false), 5000);
+    }
+  };
+
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       setCursorPosition({ x: e.clientX, y: e.clientY });
@@ -176,6 +197,87 @@ export default function Home() {
       window.removeEventListener("scroll", handleScroll);
     };
   }, []);
+
+  useEffect(() => {
+    // Use window.location to get search params
+    const params = new URLSearchParams(window.location.search);
+    console.log(params.toString());
+    const pointsEarned = params.get("pointsEarned");
+    const gameWon = params.get("gameWon");
+    const gameName = params.get("gameName");
+
+    if (pointsEarned && gameWon && gameName) {
+      // Set game completion info
+      setGameCompletionInfo({
+        pointsEarned: parseInt(pointsEarned),
+        gameWon: gameWon === "true",
+        gameName: gameName,
+      });
+
+      // Update user points
+      if (parseInt(pointsEarned) > 0) {
+        setUserPoints((prev) => prev + parseInt(pointsEarned));
+      }
+
+      // Clean up URL params after processing
+      const cleanUrl = window.location.pathname;
+      window.history.replaceState({}, document.title, cleanUrl);
+    }
+  }, []);
+
+  const handleCloseGameCompletion = () => {
+    setGameCompletionInfo(null);
+  };
+
+  // const fetchUserPoints = async () => {
+  //   // if (!walletConnected) return;
+  //   // console.log(walletConnected);
+  //   console.log("Fetching user points...");
+  //   try {
+  //     setIsLoading(true);
+
+  //     // Get user ID from wallet address
+  //     const walletAddress = "wallet-address-here"; // This would be the actual connected wallet address
+
+  //     // Make API call to your backend
+  //     const response = await fetch("http://127.0.0.1:3001/api/v1/users", {
+  //       method: "POST",
+  //       headers: {
+  //         "Content-Type": "application/json",
+  //       },
+  //       body: JSON.stringify({
+  //         userId: walletAddress,
+  //       }),
+  //     });
+
+  //     const data = await response.json();
+  //     console.log(data);
+
+  //     if (data.success) {
+  //       setUserPoints(data.data.points);
+
+  //       // Show retro congratulation popup for new users
+  //       if (data.newUser) {
+  //         setShowRetroWelcome(true);
+  //         // Pre-load the welcome sound
+  //         const audio = new Audio("/sounds/retro-welcome.mp3");
+  //         audio.load();
+  //       }
+  //     } else {
+  //       console.error("Failed to fetch user:", data.message);
+  //     }
+  //   } catch (error) {
+  //     console.error("Error in user data operation:", error);
+  //   } finally {
+  //     setIsLoading(false);
+  //   }
+  // };
+
+  const handlePointsUpdate = (newPoints: number) => {
+    setUserPoints(newPoints);
+    // Here you would typically make an API call to update the points on your backend
+    // Example: await fetch('/api/user/points', { method: 'PUT', body: JSON.stringify({ points: newPoints }) });
+  };
 
   // Show welcome toast on first load
   useEffect(() => {
@@ -202,23 +304,84 @@ export default function Home() {
     }
   };
 
-  const handleConnectWallet = () => {
-    // Simulate wallet connection
-    setShowWalletModal(false);
-    setWalletConnected(true);
-    setCryptoBalance("1.45");
-    setTokenBalance("500");
-    playSound("success");
+  // useEffect(() => {
+  //   if (walletConnected) {
+  //     console.log("Wallet connected, fetching points...");
+  //     fetchUserPoints();
+  //   }
+  // }, [walletConnected]);
 
-    toast({
-      title: "Wallet Connected!",
-      description: "Your wallet has been successfully connected.",
-      duration: 3000,
-    });
+  // 3. Update the handleConnectWallet function to ensure proper flow
+  const handleConnectWallet = async () => {
+    try {
+      setIsLoading(true);
+      console.log("Connecting wallet...");
+
+      // Mock wallet connection process
+      // For real implementation, replace with actual wallet connection code
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+
+      setWalletConnected(true);
+      setShowWalletModal(false);
+      setCryptoBalance("0.05");
+      setTokenBalance("100");
+
+      // Note: We're not calling fetchUserPoints here anymore
+      // because the useEffect will handle that
+
+      toast({
+        title: "Wallet Connected",
+        description: "Your wallet has been connected successfully!",
+      });
+    } catch (error) {
+      console.error("Error connecting wallet:", error);
+      toast({
+        variant: "destructive",
+        title: "Connection Failed",
+        description: "Failed to connect wallet. Please try again.",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const WalletPrompt = () => {
+    if (!showConnectWalletPrompt) return null;
+
+    return (
+      <div className="fixed bottom-8 right-8 bg-gradient-to-r from-purple-600 to-blue-500 p-4 rounded-lg shadow-lg animate-pulse z-50 max-w-sm">
+        <h3 className="text-white font-bold text-lg mb-2">
+          Connect Your Wallet
+        </h3>
+        <p className="text-white text-sm mb-3">
+          Connect your wallet to play games and earn rewards!
+        </p>
+        <button
+          onClick={() => setShowWalletModal(true)}
+          className="bg-white text-purple-600 px-4 py-2 rounded-md font-bold text-sm hover:bg-opacity-90 transition-all"
+        >
+          Connect Now
+        </button>
+      </div>
+    );
   };
 
   return (
     <div className="min-h-screen bg-background text-foreground font-mono overflow-hidden relative">
+      <AnimatePresence>
+        {showRetroWelcome && (
+          <RetroWelcomePopup onClose={() => setShowRetroWelcome(false)} />
+        )}
+
+        {gameCompletionInfo && (
+          <RetroGameCompletionPopup
+            pointsEarned={gameCompletionInfo.pointsEarned}
+            gameWon={gameCompletionInfo.gameWon}
+            gameName={gameCompletionInfo.gameName}
+            onClose={handleCloseGameCompletion}
+          />
+        )}
+      </AnimatePresence>
       {/* Audio element for sound effects */}
       <audio ref={audioRef} className="hidden" />
 
@@ -255,219 +418,7 @@ export default function Home() {
       )}
 
       {/* Sticky Header */}
-      <header
-        className={`fixed top-0 left-0 right-0 z-40 transition-all duration-300 ${
-          scrolled
-            ? "py-3 bg-background/90 backdrop-blur-md border-b-4 border-foreground"
-            : "py-5 bg-transparent"
-        }`}
-      >
-        <div className="max-w-7xl mx-auto px-4 flex justify-between items-center">
-          <div className="flex items-center">
-            <motion.div
-              initial={{ scale: 0.8, rotate: 0 }}
-              animate={{
-                scale: [1, 1.1, 1],
-                rotate: [0, 5, -5, 0],
-              }}
-              transition={{
-                repeat: Number.POSITIVE_INFINITY,
-                repeatType: "loop",
-                duration: 3,
-                times: [0, 0.2, 0.8, 1],
-              }}
-              className="mr-3"
-            >
-              <Gamepad2 className="h-10 w-10 text-foreground" />
-            </motion.div>
-
-            <motion.h1
-              className="text-3xl md:text-4xl font-bold tracking-tight glitch-text-lg"
-              data-text="EMPIRE OF BITS"
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5 }}
-            >
-              <span className="inline-block">EMPIRE</span>
-              <span className="inline-block text-[hsl(var(--accent-yellow))]">
-                {" "}
-                OF{" "}
-              </span>
-              <span className="inline-block text-[hsl(var(--accent-purple))]">
-                BITS
-              </span>
-            </motion.h1>
-          </div>
-
-          {/* Desktop Navigation */}
-          <nav className="hidden md:block">
-            <ul className="flex space-x-8">
-              <li>
-                <Link
-                  href="/"
-                  className="nav-link text-lg"
-                  onMouseEnter={() => playSound("hover")}
-                  onClick={() => playSound("click")}
-                >
-                  HOME
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/games"
-                  className="nav-link text-lg"
-                  onMouseEnter={() => playSound("hover")}
-                  onClick={() => playSound("click")}
-                >
-                  GAMES
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/tournaments"
-                  className="nav-link text-lg"
-                  onMouseEnter={() => playSound("hover")}
-                  onClick={() => playSound("click")}
-                >
-                  TOURNAMENTS
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/marketplace"
-                  className="nav-link text-lg"
-                  onMouseEnter={() => playSound("hover")}
-                  onClick={() => playSound("click")}
-                >
-                  MARKETPLACE
-                </Link>
-              </li>
-            </ul>
-          </nav>
-
-          {/* Wallet Section */}
-          <div className="flex items-center gap-4">
-            {/* Theme Toggle */}
-            <ThemeToggle />
-
-            {/* Notifications */}
-            <div className="relative">
-              <motion.button
-                className="relative p-3 arcade-btn-large border-3 border-current"
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.95 }}
-                onMouseEnter={() => playSound("hover")}
-                onClick={() => {
-                  setShowNotification(!showNotification);
-                  playSound("notification");
-                }}
-              >
-                <Bell className="h-6 w-6" />
-                {notifications.length > 0 && (
-                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center text-xs text-white">
-                    {notifications.length}
-                  </span>
-                )}
-              </motion.button>
-
-              {/* Notifications dropdown */}
-              <AnimatePresence>
-                {showNotification && (
-                  <motion.div
-                    className="absolute right-0 mt-2 w-80 bg-background border-3 border-foreground shadow-lg z-50"
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                  >
-                    <div className="p-3 border-b-2 border-foreground/20 flex justify-between items-center">
-                      <h3 className="text-sm font-bold">NOTIFICATIONS</h3>
-                      <button
-                        className="text-xs text-foreground/70 hover:text-foreground"
-                        onClick={() => setNotifications([])}
-                      >
-                        CLEAR ALL
-                      </button>
-                    </div>
-                    <div className="max-h-80 overflow-y-auto">
-                      {notifications.length > 0 ? (
-                        notifications.map((notification) => (
-                          <div
-                            key={notification.id}
-                            className="p-4 border-b border-foreground/10 hover:bg-foreground/5 transition-colors"
-                          >
-                            <h4 className="text-sm font-bold mb-1">
-                              {notification.title}
-                            </h4>
-                            <p className="text-sm text-foreground/70">
-                              {notification.message}
-                            </p>
-                          </div>
-                        ))
-                      ) : (
-                        <div className="p-4 text-center text-foreground/50">
-                          <p className="text-sm">No new notifications</p>
-                        </div>
-                      )}
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-
-            {walletConnected ? (
-              <motion.div
-                className="hidden md:flex items-center gap-3 bg-secondary p-3 border-3 border-foreground arcade-btn-large"
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onMouseEnter={() => playSound("hover")}
-                onClick={() => setShowWalletModal(true)}
-              >
-                <Wallet className="h-6 w-6 text-[hsl(var(--accent-yellow))]" />
-                <span className="text-base font-bold">{cryptoBalance} ETH</span>
-                <div className="flex items-center ml-2">
-                  <Image
-                    src="/token.png"
-                    width={20}
-                    height={20}
-                    alt="Game Token"
-                    className="mr-1"
-                  />
-                  <span className="text-base font-bold">{tokenBalance}</span>
-                </div>
-              </motion.div>
-            ) : (
-              <ParticleButton
-                onClick={() => {
-                  setShowWalletModal(true);
-                  playSound("click");
-                }}
-                onHover={() => playSound("hover")}
-                className="hidden md:flex items-center gap-3 bg-[hsl(var(--accent-purple))] p-3 border-3 border-[hsl(var(--accent-purple)/0.7)] text-base font-bold text-white"
-              >
-                <Wallet className="h-6 w-6" />
-                <span>CONNECT WALLET</span>
-              </ParticleButton>
-            )}
-
-            {/* Mobile menu button */}
-            <motion.button
-              className="md:hidden arcade-btn-large p-3 border-3 border-current"
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => {
-                setMenuOpen(!menuOpen);
-                playSound("click");
-              }}
-            >
-              {menuOpen ? (
-                <X className="h-7 w-7" />
-              ) : (
-                <Menu className="h-7 w-7" />
-              )}
-            </motion.button>
-          </div>
-        </div>
-      </header>
+      <Header userPoints={userPoints} onPointsUpdate={handlePointsUpdate} />
 
       {/* Mobile Navigation Menu */}
       <AnimatePresence>
